@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
-const user = require('./routers/user');
 const cors = require('cors');
 
 const app = express();
@@ -33,7 +32,12 @@ app.use((req, res, next) => {
     next();
 });
 
+//routers
+const user = require('./routers/user');
+const moment = require('./routers/moment');
+
 app.use('/user', user);
+app.use('/moment', moment);
 
 app.get('/', (req, res) => {
     res.send(`

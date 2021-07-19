@@ -1,5 +1,6 @@
-const findOrCreat = require("mongoose-findorcreate");
+const path = require('path');
 const mongoose = require("mongoose");
+const findOrCreat = require("mongoose-findorcreate");
 const { momentSchema } = require('./moment');
 
 const userSchema = new mongoose.Schema({
@@ -35,6 +36,8 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "user"
     },
+    image_path: { type: String, default: path.join('uploads', 'avatar.png') },
+    about: { type: String, default: "" },
     moment_data: [momentSchema]
 });
 

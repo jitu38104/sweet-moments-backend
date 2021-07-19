@@ -7,7 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const userAuth = require('../config/middleware');
-const { momentModel } = require('../models/moment');
+const multerMiddleware = require('../config/multer');
+const { docFinder, docDeleter } = require('../utils/database');
+const { deleteFolderRecursive: fileUnlink } = require('../utils/fileRem');
 
 const route = express.Router();
 const saltRounds = 10;
@@ -17,31 +19,7 @@ passportInit();
 route.use(passport.initialize());
 route.use(passport.session());
 
-let storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const userId = req.session?.user?._id;
-        const location = path.join('uploads', `${userId}`);
-        cb(null, location);
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`);
-    }
-});
-
-var upload = multer({ //multer settings
-    storage: storage,
-    fileFilter: function (req, file, cb) {
-        let ext = path.extname(file.originalname);
-        if(ext !== '.png' && ext !== '.jpg' && ext !== '.gif' && ext !== '.jpeg') {
-            return cb(new Error('Only images are allowed'))
-        }
-        cb(null, true)
-    },
-    limits:{
-        fileSize: 1024 * 1024 * 10
-    }
-}).single('uploadPic');
-
+let upload = multerMiddleware(multer);
 
 route.post('/register', async(req, res) => {    
     const { name, email, password } = req.body;
@@ -88,20 +66,46 @@ route.get("/logout", (req, res) => {
 
 route.post('/upload/img', [userAuth, upload], async(req, res) => {
     const userId = req.session?.user?._id;
-    const newMomentData = new momentModel({
-        title: req.body.title,
-        description: req.body.desc,
-        image_path: req.file.path
-    });
 
-    const currentUser = await userModel.findById(userId);
-    currentUser?.moment_data.push(newMomentData);
-    currentUser.save(err => {
+    const user = await docFinder(userModel, userId);
+
+    user.image_path = req.file?.path;
+    user.save(err => {
         !err 
-        ?   res.status(200).json({message: "Moment successfully uploaded!"}) 
-        :   res.status(500).json({message: err.message})
+        ? res.status(200).json({
+            message: "successfully uploaded!",
+            path: req.file?.path
+        })
+        : res.status(500).json({ message: err.message });
+    });        
+});
+
+route.post('/edit/info', userAuth, async(req, res) => {
+    const userId = req.session?.user?._id;
+    const { name, about } = req.body;
+
+    const user = await docFinder(userModel, userId);
+
+    user.name = name;
+    user.about = about;
+
+    user.save(err => {
+        !err
+        ? res.status(200).json({ message: "Information updated successfully!" })
+        : res.status(500).json({ message: err.message });
     });
 });
 
+route.delete('/del', userAuth, async(req, res) => {
+    const userId = req.session?.user?._id;
+
+    docDeleter(userModel, userId).then(result => {
+        fileUnlink(path.join('uploads', `${result._id}`));
+        res.status(200).json({ message: "User has been deleted!" });
+    }).catch(err => {
+        res.status(500).json({ message: err.message });
+    });
+    
+});
 
 module.exports = route;

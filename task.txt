@@ -1,0 +1,30 @@
+[+] create all neccessary routes
+[+] mongo db connection
+[+] create models
+[+] create two different routers (moment and user)
+[+] multer
+[+] passport
+
+User
+[+] registration
+[+] login/logout system
+[+] edit account
+[+] edit dp
+[+] delete account
+[-] follow/unfollow others
+[-] like/dislike others moment
+[-] comment on others moment
+
+moment
+[+] create moment model
+[+] push a moment into user's account array
+[+] add moment image
+[+] edit moment
+[+] delete moment
+[-] increase/decrease like functionality
+[-] increase/decrease dislike functionality
+[-] add comment on a particular moment
+
+[-] git commit -m "final commit"
+[-] push this project on github
+[-] host it on Heroku for good

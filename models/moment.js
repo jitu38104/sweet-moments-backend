@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 exports.momentSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
-    createdAt: { type: String, default: Date() },
+    createdAt: { type: Date, default: Date() },
     image_path: { type: String, required: true },
     comments: { type: Array, default: [] },
     meta: {
