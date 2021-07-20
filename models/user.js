@@ -30,7 +30,8 @@ const userSchema = new mongoose.Schema({
         followings: {
             total: { type: Number, default: 0 },
             users: { type: Array, default: [] }
-        }
+        },
+        liked: { type: Array, default: [] }
     },    
     role: {
         type: String,

@@ -1,8 +1,10 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const session = require('express-session');
+const passport = require('passport');
 const cors = require('cors');
+const passportInit = require("./config/passport");
+const databaseConnectivity = require('./config/dbConnection');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,6 +28,12 @@ app.use(session({
 //cors middleware
 app.use(cors());
 
+//passport middleware
+passportInit();
+
+app.use(passport.initialize());
+app.use(passport.session());
+
 //local variables
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
@@ -36,8 +44,8 @@ app.use((req, res, next) => {
 const user = require('./routers/user');
 const moment = require('./routers/moment');
 
-app.use('/user', user);
-app.use('/moment', moment);
+app.use('api/user', user);
+app.use('api/moment', moment);
 
 app.get('/', (req, res) => {
     res.send(`
@@ -47,14 +55,9 @@ app.get('/', (req, res) => {
     `);
 })
 
-mongoose.connect(url, { 
-    useNewUrlParser: true, 
-    useCreateIndex: true, 
-    useUnifiedTopology: true, 
-    useFindAndModify: false 
-}).then((res) =>{
+databaseConnectivity(url).then((res) => {
     console.log(`<${res.connections[0].name}> database has been connected.`);
     app.listen(PORT, () => console.log("Server is running on port:", PORT));
 }).catch(err => {
-    console.log(err.message);   //error
+    console.log(err.message);   
 });

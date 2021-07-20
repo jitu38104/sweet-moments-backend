@@ -11,9 +11,9 @@ User
 [+] edit account
 [+] edit dp
 [+] delete account
-[-] follow/unfollow others
-[-] like/dislike others moment
-[-] comment on others moment
+[+] follow/unfollow others
+[+] like/dislike others moment
+[+] comment on others moment
 
 moment
 [+] create moment model
@@ -21,9 +21,9 @@ moment
 [+] add moment image
 [+] edit moment
 [+] delete moment
-[-] increase/decrease like functionality
-[-] increase/decrease dislike functionality
-[-] add comment on a particular moment
+[+] increase/decrease like functionality
+[+] increase/decrease dislike functionality
+[+] add comment on a particular moment
 
 [-] git commit -m "final commit"
 [-] push this project on github

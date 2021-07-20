@@ -2,7 +2,6 @@ const express = require('express');
 const passport = require('passport');
 const bcrypt = require('bcrypt');
 const userModel = require("../models/user");
-const passportInit = require("../config/passport");
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
@@ -10,14 +9,12 @@ const userAuth = require('../config/middleware');
 const multerMiddleware = require('../config/multer');
 const { docFinder, docDeleter } = require('../utils/database');
 const { deleteFolderRecursive: fileUnlink } = require('../utils/fileRem');
+const controller = require('../controllers/userController');
 
 const route = express.Router();
 const saltRounds = 10;
 
-passportInit();
 
-route.use(passport.initialize());
-route.use(passport.session());
 
 let upload = multerMiddleware(multer);
 
@@ -58,11 +55,7 @@ route.post("/login", function(req, res, next){
     })(req, res, next);
 });
 
-route.get("/logout", (req, res) => {
-    req.logOut();
-    delete req.session.user;
-    res.status(200).json({ msg: "User logout successfully!" });
-});
+route.get("/logout", controller.logout);
 
 route.post('/upload/img', [userAuth, upload], async(req, res) => {
     const userId = req.session?.user?._id;
@@ -96,6 +89,59 @@ route.post('/edit/info', userAuth, async(req, res) => {
     });
 });
 
+route.get('/follow/:otherId', userAuth, (req, res) => {
+    const otherUserId = req.params.otherId;
+    const currentUserId = req.session?.user?._id;
+
+    userModel.updateOne({ _id: otherUserId }, {
+            $inc: {"meta.followers.total": 1},
+            $addToSet: {"meta.followers.users": currentUserId}
+        }, (err) => {
+        if(err) return res.status(500).json({message: err.message});
+    });
+
+    userModel.updateOne({ _id: currentUserId }, {
+        $inc: { "meta.followings.total": 1 },
+        $addToSet: { "meta.followings.users": otherUserId }
+    }, (err) => {
+        if(err) return res.status(500).json({message: err.message});
+    });
+
+    res.status(200).json({ message: `You have followed ${otherUserId}` });
+});
+
+route.get('/unfollow/:otherId', userAuth, async(req, res) => {
+    const otherUserId = req.params.otherId;
+    const userId = req.session?.user?._id;
+
+    const otherUser = await docFinder(userModel, otherUserId);
+    const currentUser = await docFinder(userModel, userId);
+
+    if(!otherUser || !currentUser) {
+        return res.status(404).json({ message: "User is not defined" });
+    }
+
+    if(otherUser?.meta?.followers?.total > 0 && currentUser?.meta?.followings?.total > 0) {
+        userModel.findByIdAndUpdate(otherUserId, {
+            $inc: { "meta.followers.total": -1 },
+            $pull: { "meta.followers.users": userId }
+        }, (err) => {
+            if(err) return res.status(500).json({message: err.message});
+        });
+
+        userModel.findByIdAndUpdate(userId, {
+            $inc: { "meta.followings.total": -1 },
+            $pull: { "meta.followings.users": otherUserId }
+        }, (err) => {
+            if(err) return res.status(500).json({message: err.message});
+        });
+    } else {
+        return res.status(500).json({ message: "User has zero total." });
+    }  
+    
+    res.status(200).json({ message: `You have unfollowed ${otherUserId}` });
+});
+
 route.delete('/del', userAuth, async(req, res) => {
     const userId = req.session?.user?._id;
 
@@ -104,8 +150,7 @@ route.delete('/del', userAuth, async(req, res) => {
         res.status(200).json({ message: "User has been deleted!" });
     }).catch(err => {
         res.status(500).json({ message: err.message });
-    });
-    
+    });    
 });
 
 module.exports = route;
