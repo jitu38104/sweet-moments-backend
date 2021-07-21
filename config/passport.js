@@ -10,17 +10,17 @@ const passportInit = () => {
         const loggedInUser = await userModel.findOne({ email: email });
 
         if(!loggedInUser) {
-            return done(null, false, { msg: "no user with such username" });
+            return done(null, false, { message: "no user with such username" });
         } else {
             //password matching
             bcrypt.compare(password, loggedInUser.password).then(match => {
                 if(match) {
-                    return done(null, loggedInUser, { msg: "Login Successfully!" });
+                    return done(null, loggedInUser, { message: "Login Successfully!" });
                 } else {
-                    return done(null, false, { msg: "wrong password or username" });
+                    return done(null, false, { message: "wrong password or username" });
                 }                
             }).catch(err => {
-                return done(null, false, { msg: err.message });
+                return done(null, false, { message: err.message });
             });
         }
     }));

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-exports.momentSchema = new mongoose.Schema({
+const momentSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     createdAt: { type: Date, default: Date() },
@@ -12,4 +12,6 @@ exports.momentSchema = new mongoose.Schema({
     }
 });
 
-exports.momentModel = mongoose.model('Moment', this.momentSchema);
+const momentModel = mongoose.model('Moment', momentSchema);
+
+module.exports = { momentModel, momentSchema }

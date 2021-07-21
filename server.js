@@ -5,6 +5,7 @@ const passport = require('passport');
 const cors = require('cors');
 const passportInit = require("./config/passport");
 const databaseConnectivity = require('./config/dbConnection');
+const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,8 +45,8 @@ app.use((req, res, next) => {
 const user = require('./routers/user');
 const moment = require('./routers/moment');
 
-app.use('api/user', user);
-app.use('api/moment', moment);
+app.use('/api/user', user);
+app.use('/api/moment', moment);
 
 app.get('/', (req, res) => {
     res.send(`
@@ -54,6 +55,9 @@ app.get('/', (req, res) => {
     </div>
     `);
 })
+
+//errorHandler register always in the last
+app.use(errorHandler);
 
 databaseConnectivity(url).then((res) => {
     console.log(`<${res.connections[0].name}> database has been connected.`);

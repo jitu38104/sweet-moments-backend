@@ -4,6 +4,10 @@
 [+] create two different routers (moment and user)
 [+] multer
 [+] passport
+[+] routes controller
+[+] joi validation
+[+] JWT
+[+] error handler + custom error handler
 
 User
 [+] registration

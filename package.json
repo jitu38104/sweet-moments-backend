@@ -11,6 +11,8 @@
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "express-session": "^1.17.2",
+    "joi": "^17.4.1",
+    "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.13.2",
     "mongoose-findorcreate": "^3.0.0",
     "multer": "^1.4.2",

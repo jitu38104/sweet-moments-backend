@@ -23,6 +23,9 @@ const multerInit = (multer) => {
     const upload = multer({ //multer settings
         storage: storage,
         fileFilter: filter,
+        onError: (err, next) => {
+            next(err);
+        },
         limits:{
             fileSize: 1024 * 1024 * 10
         }
