@@ -1,9 +1,8 @@
 const express = require('express');
 const multer = require('multer');
-const userAuth = require('../middlewares/userAuth');
 const multerMiddleware = require('../config/multer');
 const tokenAuth = require('../middlewares/tokenAuth');
-const { userController, followController } = require('../controllers/index');
+const { userController, followController } = require('../controllers');
 
 const route = express.Router();
 
@@ -16,17 +15,17 @@ route.post("/login", userController.login);
 
 route.get('/me', tokenAuth, userController.whoAmI);
 
-route.get("/logout", userController.logout);
+route.post("/logout", userController.logout);
 
-route.post('/upload/img', [userAuth, upload], userController.userImageUpload);
+route.post('/upload/img', [tokenAuth, upload], userController.userImageUpload);
 
-route.post('/edit/info', userAuth, userController.userInfoEdit);
+route.post('/edit/info', tokenAuth, userController.userInfoEdit);
 
-route.get('/follow/:otherId', userAuth, followController.follow);
+route.get('/follow/:otherId', tokenAuth, followController.follow);
 
-route.get('/unfollow/:otherId', userAuth, followController.unfollow);
+route.get('/unfollow/:otherId', tokenAuth, followController.unfollow);
 
-route.delete('/del', userAuth, userController.userDelete);
+route.delete('/del', userController.userDelete);
 
 
 module.exports = route;

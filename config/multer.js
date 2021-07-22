@@ -3,7 +3,7 @@ const path = require('path');
 const multerInit = (multer) => {
     const storage = multer.diskStorage({
         destination: (req, file, cb) => {
-            const userId = req.session?.user?._id;
+            const userId = req.user?._id;
             const location = path.join('uploads', `${userId}`);
             cb(null, location);
         },

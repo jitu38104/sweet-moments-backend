@@ -3,7 +3,11 @@ exports.docFinder = async(model, id) => {
     return doc;
 }
 
-exports.docDeleter = async(model, id) => {
-    const doc = await model.findByIdAndDelete(id);
-    return doc;
+exports.docDeleter = async(model, id, next) => {
+    try {
+        const doc = await model.findByIdAndDelete(id);
+        return doc;   
+    } catch (error) {
+        next(error);
+    }    
 }

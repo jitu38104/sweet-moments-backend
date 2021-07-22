@@ -8,6 +8,7 @@ const { docFinder, docDeleter } = require('../../utils/database');
 const { deleteFolderRecursive: fileUnlink } = require('../../utils/fileRem');
 const customErrorHandler = require('../../services/CustomErrorHandler');
 const JwtService = require('../../services/JwtService');
+const tokenModel = require('../../models/token');
 
 const saltRounds = 10;
 
@@ -32,7 +33,23 @@ const userController = {
             await newUser.save(err => {
                 if(!err) {
                     fs.mkdirSync(path.join('uploads', `${newUser._id}`));
-                    res.status(200).json(newUser);
+                    
+                    const payload = {
+                        _id: newUser._id,
+                        role: newUser.role
+                    };
+
+                    const token = JwtService.sign(payload);
+
+                    try {
+                        tokenModel.create({access_token: token}, (err) => {
+                            if(err) return next(err);
+                        });
+                    } catch (error) {
+                        return next(error);
+                    }
+
+                    return res.status(200).json( { access_token: token } );
                 } else {
                     return next(customErrorHandler.alreadyExist("This email is already in use, choose another."));
                 }
@@ -42,7 +59,7 @@ const userController = {
     
     async login(req, res, next){  
         if(!req.body.email || !req.body.password) {
-            return res.status(401).json({message: "missing credentials"});
+            return res.status(401).json({ message: "missing credentials" });
         }
 
         const loginSchema = joi.object({
@@ -77,7 +94,15 @@ const userController = {
 
                 const token = JwtService.sign(payload);
 
-                return res.status(200).json({access_token: token});
+                try {
+                    tokenModel.create({access_token: token}, (err) => {
+                        if(err) return next(err);
+                    });
+                } catch (error) {
+                    return next(error);
+                }
+
+                return res.status(200).json({ access_token: token });
             })
         })(req, res, next);
     },
@@ -98,30 +123,51 @@ const userController = {
     },
 
     logout(req, res, next) {
-        req.logOut();
-        delete req.session.user;
-        res.status(200).json({ msg: "User logout successfully!" });
+        try {
+            req.logOut();
+            delete req.session?.user;
+            
+            tokenModel.deleteOne({ access_token: req.body.token }, (err, doc) => {
+                if(err) return next(err);
+
+                if(!doc.deletedCount) {
+                    return next(customErrorHandler.authenticationError("Token is invalid"));
+                } else {
+                    res.status(200).json({ msg: "User logout successfully!" });
+                }                
+            });                        
+        } catch (error) {
+            return next(error);
+        }                  
     },
 
-    async userImageUpload (req, res, next) {
-        const userId = req.session?.user?._id;
+    async userImageUpload (req, res, next) {        
+        const userId = req.user?._id;
+        try {
+            const user = await docFinder(userModel, userId);
 
-        const user = await docFinder(userModel, userId);
-
-        user.image_path = req.file?.path;
-        await user.save(err => {
-            !err 
-            ? res.status(200).json({
-                message: "successfully uploaded!",
-                path: req.file?.path
-            })
-            : next(err);           
-        });        
+            user.image_path = req.file?.path;
+            await user.save(err => {
+                if(err) {
+                    fs.unlinkSync(req.file.path);
+                    return next(err);
+                }
+                res.status(200).json({
+                    message: "successfully uploaded!",
+                    path: req.file?.path
+                })                
+            });
+        } catch (error) {
+            fs.unlinkSync(req.file.path);
+            return next(error);
+        }
+                
     },
 
     async userInfoEdit (req, res, next) {
-        const userId = req.session?.user?._id;
-        const { name, about } = req.body;
+        const userId = req.user?._id;       
+
+        const { name, about } = req.body;          
 
         const user = await docFinder(userModel, userId);
 
@@ -135,14 +181,14 @@ const userController = {
         });
     },
 
-    async userDelete (req, res) {
-        const userId = req.session?.user?._id;
-
-        docDeleter(userModel, userId).then(result => {
+    async userDelete (req, res, next) {
+        const userId = req.query?.user_id;
+        
+        docDeleter(userModel, userId, next).then(result => {
             fileUnlink(path.join('uploads', `${result._id}`));
             res.status(200).json({ message: "User has been deleted!" });
         }).catch(err => {
-            return next(err);            
+            return next(err);
         });
     }
 }

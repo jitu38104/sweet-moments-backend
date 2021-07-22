@@ -1,13 +1,10 @@
 const express = require('express');
 const multer = require('multer');
-const userAuth = require('../middlewares/userAuth');
 const tokenAuth = require('../middlewares/tokenAuth');
 const multerMiddleware = require('../config/multer');
-const { momentController } = require('../controllers/index');
+const { momentController } = require('../controllers');
 
 const route = express.Router();
-
-route.use(userAuth);
 
 let upload = multerMiddleware(multer);
 
@@ -15,16 +12,18 @@ route.get('/user/moments', tokenAuth, momentController.userMoment);
 
 route.get('/all/moments', momentController.allMoment);
 
-route.post('/upload/img', upload, momentController.addMoment);
+route.get('/one/moment/:id', momentController.oneMoment);
 
-route.patch('/edit/:id', momentController.momentEdit);
+route.post('/upload/img', tokenAuth, upload, momentController.addMoment);
 
-route.get('/like/:otherUserId/:momentId', momentController.like);
+route.patch('/edit/:id', tokenAuth, momentController.momentEdit);
 
-route.get('/dislike/:otherUserId/:momentId', momentController.dislike);
+route.get('/like/:otherUserId/:momentId', tokenAuth, momentController.like);
 
-route.post('/add/comment/:momentId', momentController.addComment);
+route.get('/dislike/:otherUserId/:momentId', tokenAuth, momentController.dislike);
 
-route.delete('/delete/:id', momentController.momentDelete);
+route.post('/add/comment', tokenAuth, momentController.addComment);
+
+route.delete('/delete/:id', tokenAuth, momentController.momentDelete);
 
 module.exports = route;

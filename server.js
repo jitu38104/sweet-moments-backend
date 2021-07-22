@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 //static middleware
-app.use(express.static('uploads/'));
+app.use('/uploads', express.static('uploads'));
 
 //session middleware
 app.use(session({

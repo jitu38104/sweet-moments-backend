@@ -22,7 +22,7 @@ const momentController = {
     async allMoment (req, res, next) {
         let momentsArr = [];
         try {
-            const users = await userModel.find();
+            const users = await userModel.find({}).sort({'_id': -1});
 
             users.forEach(doc => {
                 momentsArr = [ ...momentsArr, ...doc.moment_data ];
@@ -35,11 +35,24 @@ const momentController = {
     },
 
     async oneMoment (req, res, next) {
-        
+        try {
+            const momentId = req.params?.id;
+            const otherUserId = req.query?.user_id;
+            
+            userModel.findById(otherUserId, {
+                moment_data: { $elemMatch: { _id: momentId } }
+            }, ( err, doc ) => {
+                !err
+                ? res.status(200).json(doc.moment_data)
+                : next(err);
+            });
+        } catch(error) {
+            return next(error);
+        }
     },
 
     async addMoment (req, res, next) {
-        const userId = req.session?.user?._id;
+        const userId = req.user?._id;
         try {
             let newMomentData;
             try{
@@ -49,6 +62,7 @@ const momentController = {
                     image_path: req.file.path
                 });
             } catch(error) {
+                fs.unlinkSync(req.file.path);
                 return next(error);
             }
 
@@ -56,43 +70,46 @@ const momentController = {
 
             currentUser?.moment_data.push(newMomentData);
             await currentUser.save(err => {
-                !err 
-                ?   res.status(200).json({message: "Moment successfully uploaded!"}) 
-                :   next(err);            
+                if(err) {
+                    fs.unlinkSync(req.file.path);
+                    return next(err);
+                }  
+                return res.status(200).json({ message: "Moment successfully uploaded!" });                           
             });
         } catch(error) {
+            fs.unlinkSync(req.file.path);
             return next(error);
         }
     },
 
     async momentEdit (req, res, next) {
         const momentDataId = req.params.id;
-        const userId = req.session?.user?._id;
-        const { title, desc } = req.query;
+        const userId = req.user?._id;
 
-        await userModel.findById(userId, (err, doc) => {
-            if(!err) {
-                const momentDocArr = doc.moment_data;
+        const { title, desc } = req.body;
 
-                momentDocArr.forEach((item, i) => {
-                    if(item._id == momentDataId){
-                        doc.moment_data[i].title = title;
-                        doc.moment_data[i].description = desc;                    
-                    }
-                });
-                doc.save(err => {
-                    !err 
-                    ? res.status(200).json({message: 'Data has been updated!'})
-                    : next(err);
-                });
-            } else {
-                return next(err);
-            }
-        })
+        try {
+            userModel.findByIdAndUpdate(userId,{
+                $set: { 
+                    "moment_data.$[momentData].title": title,
+                    "moment_data.$[momentData].description": desc
+                 }
+            },
+            {"arrayFilters": [{ "momentData._id": momentDataId }]}
+            ,(err) => {
+                if(err) {
+                    return next(err);                
+                } else {
+                    return res.status(200).json("Moment successfully updated!");
+                }
+            });
+        } catch (error) {
+            return next(error);
+        }
     },
 
     like (req, res, next) {
-        const currentUserId = req.query?.user_id;
+        const currentUserId = req.user?._id;
         const otherUserId = req.params?.otherUserId;
         const momentId = req.params?.momentId;
 
@@ -114,7 +131,7 @@ const momentController = {
     },
 
     async dislike (req, res, next) {
-        const currentUserId = req.query?.user_id;
+        const currentUserId = req.user?._id;
         const otherUserId = req.params?.otherUserId;
         const momentId = req.params?.momentId;
         const otherUserData = await docFinder(userModel, otherUserId);
@@ -146,20 +163,19 @@ const momentController = {
     },
 
     addComment (req, res, next) {
-        const { user_id, user_id2} = req.query;
-        const momentId = req.params?.momentId;
-        const userComment = req.body?.comment;
+        const userId = req.user?._id; 
+        const { other_id, momentId, comment } = req.body;
         
-        if(!user_id || !user_id2 || !momentId) {
+        if(!userId || !other_id || !momentId) {
             return next(customErrorHandler.forbiddenError("Credentials are required!"));
         }
 
         const commentObj = {
-            id: user_id,
-            comment: userComment
+            id: userId,
+            comment: comment
         };
 
-        userModel.findByIdAndUpdate(user_id2, {
+        userModel.findByIdAndUpdate(other_id, {
             $push: { "moment_data.$[momentData].comments": commentObj }
         },
         {
@@ -173,28 +189,35 @@ const momentController = {
 
     async momentDelete (req, res, next) {
         const momentDataId = req.params.id;
-        const userId = req.session.user?._id;
+        const userId = req.user?._id;
         let imgPath = "";
         
-        await userModel.findById(userId, (err, doc) => {
-            if(!err) {
-                const momentDocArr = doc.moment_data;
-                const momentData = momentDocArr.filter(doc => doc?._id == momentDataId);
-                imgPath = momentData[0]?.image_path;
-            } else {
-                return next(err);
-            }
-        });
-        
-        await userModel.findByIdAndUpdate({ _id: userId }, { $pull: { moment_data: { _id: momentDataId }}}, (err) => {
-            if(!err) {            
-                fs.unlinkSync(imgPath);
-                console.log("Data successfully deleted!")
-                res.status(200).json({ message: "Data successfully deleted!" });            
-            } else {
-                return next(err);
-            }                 
-        });
+        try {
+            await userModel.findById(userId, (err, doc) => {
+                if(!err) {                    
+                    const momentDocArr = doc.moment_data;
+                    const momentData = momentDocArr.filter(doc => doc?._id == momentDataId);
+                    imgPath = momentData[0]._doc.image_path;    //_doc is important to make getters disable                     
+                    
+                } else {
+                    return next(err);
+                }
+            });
+            
+            await userModel.findByIdAndUpdate({ _id: userId }, { $pull: { moment_data: { _id: momentDataId }}}, (err) => {
+                if(!err) {            
+                    fs.unlink(imgPath, (err) => {
+                        if(err) return next(err);
+                    });
+                    console.log("Data successfully deleted!")
+                    res.status(200).json({ message: "Data successfully deleted!" });            
+                } else {
+                    return next(err);
+                }                 
+            });
+        } catch (error) {
+            return next(error);    
+        }        
     }
 }
 
