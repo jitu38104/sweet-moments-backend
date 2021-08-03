@@ -24,7 +24,7 @@ const userFollowController = {
             return next(error);
         }       
 
-        res.status(200).json({ message: `You have followed ${otherUserId}` });
+        res.status(200).json({ message: `You have followed ${otherUserId}`});
     },
 
     async unfollow (req, res, next) {

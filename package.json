@@ -10,14 +10,15 @@
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
-    "express-session": "^1.17.2",
     "joi": "^17.4.1",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.13.2",
     "mongoose-findorcreate": "^3.0.0",
     "multer": "^1.4.2",
+    "nodemailer": "^6.6.3",
     "passport": "^0.4.1",
-    "passport-local": "^1.0.0"
+    "passport-local": "^1.0.0",
+    "stripe": "^8.167.0"
   },
   "scripts": {
     "start": "nodemon server.js"

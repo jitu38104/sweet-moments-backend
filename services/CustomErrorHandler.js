@@ -5,7 +5,7 @@ class customErrorHandler extends Error {
         this.status = code;
     }
 
-    static alreadyExist(msg) {
+    static alreadyExist(msg="A request conflict with current state of the target resource.") {
         const newInstance = new customErrorHandler(msg, 409);
         return newInstance;
     }
@@ -15,17 +15,17 @@ class customErrorHandler extends Error {
         return newInstance;
     }
 
-    static authenticationError(msg = "Unauthorized user") {
+    static authenticationError(msg="Unauthorized user") {
         const newInstance = new customErrorHandler(msg, 401);
         return newInstance;
     }
 
-    static mongooseError(msg) {
+    static mongooseError(msg="Bad Request") {
         const newInstance = new customErrorHandler(msg, 400);
         return newInstance;
     }
 
-    static forbiddenError(msg) {
+    static forbiddenError(msg="The client cannot access the requested resource.") {
         const newInstance = new customErrorHandler(msg, 403);
         return newInstance;
     }

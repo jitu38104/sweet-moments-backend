@@ -39,6 +39,7 @@ const userSchema = new mongoose.Schema({
     },
     image_path: { type: String, default: path.join('uploads', 'avatar.png') },
     about: { type: String, default: "" },
+    profession: String,
     moment_data: [momentSchema]
 });
 

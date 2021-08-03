@@ -15,7 +15,11 @@ route.post("/login", userController.login);
 
 route.get('/me', tokenAuth, userController.whoAmI);
 
+route.get("/all/:page", userController.allData);
+
 route.post("/logout", userController.logout);
+
+route.get("/lite/me/:id", userController.liteInfo);
 
 route.post('/upload/img', [tokenAuth, upload], userController.userImageUpload);
 
@@ -25,7 +29,10 @@ route.get('/follow/:otherId', tokenAuth, followController.follow);
 
 route.get('/unfollow/:otherId', tokenAuth, followController.unfollow);
 
-route.delete('/del', userController.userDelete);
+route.delete('/del', tokenAuth, userController.userDelete);
 
+route.post('/varify', userController.mailVarify);
+
+route.post('/password/reset', userController.resetPass);
 
 module.exports = route;

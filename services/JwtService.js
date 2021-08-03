@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 class JwtService {
-    static sign(payload, secret = process.env.JWT_SECRET, expiry = '1y') {
+    static sign(payload, secret = process.env.JWT_SECRET, expiry = '1d') {
         return jwt.sign(payload, secret, { expiresIn: expiry });
     }
 

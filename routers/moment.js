@@ -26,4 +26,7 @@ route.post('/add/comment', tokenAuth, momentController.addComment);
 
 route.delete('/delete/:id', tokenAuth, momentController.momentDelete);
 
+////////////////stripe payment route////////////////////
+route.post("/payment/create", momentController.stripePayment);
+
 module.exports = route;

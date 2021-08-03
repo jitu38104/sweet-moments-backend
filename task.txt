@@ -29,6 +29,6 @@ moment
 [+] increase/decrease dislike functionality
 [+] add comment on a particular moment
 
-[-] git commit -m "final commit"
+[+] git commit -m "final commit"
 [-] push this project on github
 [-] host it on Heroku for good

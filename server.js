@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const session = require('express-session');
 const passport = require('passport');
 const cors = require('cors');
 const passportInit = require("./config/passport");
@@ -9,7 +8,8 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const url = process.env.LOCAL_DB;
+//const url = process.env.LOCAL_DB;
+const url = process.env.CLOUD_DB;
 
 //body parser middleware
 app.use(express.urlencoded({ extended: true }));
@@ -17,14 +17,6 @@ app.use(express.json());
 
 //static middleware
 app.use('/uploads', express.static('uploads'));
-
-//session middleware
-app.use(session({
-    secret: process.env.SESSION_KEY,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }
-}));
 
 //cors middleware
 app.use(cors());
@@ -34,12 +26,6 @@ passportInit();
 
 app.use(passport.initialize());
 app.use(passport.session());
-
-//local variables
-app.use((req, res, next) => {
-    res.locals.user = req.session.user || null;
-    next();
-});
 
 //routers
 const user = require('./routers/user');
@@ -54,7 +40,7 @@ app.get('/', (req, res) => {
         <h2>Welcome to our server page!</h2>
     </div>
     `);
-})
+});
 
 //errorHandler register always in the last
 app.use(errorHandler);

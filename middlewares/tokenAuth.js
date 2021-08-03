@@ -5,7 +5,7 @@ const { docFinder } = require("../utils/database");
 
 const auth = async(req, res, next) => {
     const authHeader = req.headers.authorization;
-    console.log(authHeader)
+    
     if(!authHeader) {
         return next(customErrorHandler.authenticationError());
     }
@@ -16,7 +16,7 @@ const auth = async(req, res, next) => {
         const { _id, role } = jwtService.varify(token); 
         
         const isUser = await docFinder(userModel, _id);
-
+        
         if(!isUser) {
             return next(customErrorHandler.authenticationError());
         }

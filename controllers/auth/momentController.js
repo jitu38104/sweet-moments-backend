@@ -3,6 +3,7 @@ const { momentModel } = require('../../models/moment');
 const userModel = require('../../models/user');
 const { docFinder } = require('../../utils/database');
 const customErrorHandler = require('../../services/CustomErrorHandler');
+const stripe = require('stripe')("sk_test_51J9YWaSB8Rl9bKhN9tW0RsVLMkNXmRiDbEQ54iW89vz4WvdPVzfwGYeMSkxk4eDpqdmJu7l23mA4a2Blb6ud7maT009E8Hd3p1");
 
 const momentController = {
     async userMoment (req, res, next) {
@@ -25,7 +26,9 @@ const momentController = {
             const users = await userModel.find({}).sort({'_id': -1});
 
             users.forEach(doc => {
-                momentsArr = [ ...momentsArr, ...doc.moment_data ];
+                if(doc?.moment_data.length){
+                    momentsArr = [ ...momentsArr,  ...doc.moment_data ];
+                }                
             });
 
             res.status(200).json(momentsArr);   
@@ -43,7 +46,7 @@ const momentController = {
                 moment_data: { $elemMatch: { _id: momentId } }
             }, ( err, doc ) => {
                 !err
-                ? res.status(200).json(doc.moment_data)
+                ? res.status(200).json(doc?.moment_data)
                 : next(err);
             });
         } catch(error) {
@@ -53,6 +56,7 @@ const momentController = {
 
     async addMoment (req, res, next) {
         const userId = req.user?._id;
+
         try {
             let newMomentData;
             try{
@@ -68,13 +72,17 @@ const momentController = {
 
             const currentUser = await userModel.findById(userId);
 
-            currentUser?.moment_data.push(newMomentData);
+            currentUser?.moment_data.unshift(newMomentData);
             await currentUser.save(err => {
                 if(err) {
                     fs.unlinkSync(req.file.path);
                     return next(err);
                 }  
-                return res.status(200).json({ message: "Moment successfully uploaded!" });                           
+                return res.status(200).json({ 
+                    message: "Moment successfully uploaded!",
+                    id: currentUser?.moment_data[0]._id,
+                    flag: 1
+                });                           
             });
         } catch(error) {
             fs.unlinkSync(req.file.path);
@@ -96,11 +104,16 @@ const momentController = {
                  }
             },
             {"arrayFilters": [{ "momentData._id": momentDataId }]}
-            ,(err) => {
+            ,(err, doc) => {
                 if(err) {
                     return next(err);                
                 } else {
-                    return res.status(200).json("Moment successfully updated!");
+                    const moment = doc?.moment_data.filter(item => item._id == momentDataId)[0];
+
+                    return res.status(200).json({
+                        message: "Moment successfully updated!",
+                        updated: { moment }
+                    });
                 }
             });
         } catch (error) {
@@ -123,11 +136,14 @@ const momentController = {
 
         userModel.findByIdAndUpdate(currentUserId, {
             $addToSet: { "meta.liked": momentId }
-        }, err => {
-            if(err) return next(err);
+        }, (err) => {
+            if(err) return next(err);            
         });
 
-        res.status(200).json({ message: `You have liked ${momentId}` });
+        res.status(200).json({
+            message: `You have liked ${momentId}`,
+            flag: 1
+        });
     },
 
     async dislike (req, res, next) {
@@ -156,7 +172,10 @@ const momentController = {
                         if(err) return next(err);
                     });
 
-                    res.status(200).json({ message: `You have disliked ${momentId}` });
+                    res.status(200).json({
+                        message: `You have disliked ${momentId}`,
+                        flag: 1
+                    });
                 }
             }
         });    
@@ -164,7 +183,7 @@ const momentController = {
 
     addComment (req, res, next) {
         const userId = req.user?._id; 
-        const { other_id, momentId, comment } = req.body;
+        const { other_id, momentId, comment, date } = req.body;
         
         if(!userId || !other_id || !momentId) {
             return next(customErrorHandler.forbiddenError("Credentials are required!"));
@@ -172,19 +191,40 @@ const momentController = {
 
         const commentObj = {
             id: userId,
-            comment: comment
+            comment: comment,
+            date: date
         };
 
-        userModel.findByIdAndUpdate(other_id, {
-            $push: { "moment_data.$[momentData].comments": commentObj }
-        },
-        {
-            "arrayFilters": [{ "momentData._id": momentId }]
-        }, err => {
-            if(err) return next(err);
+        try {
+            userModel.findByIdAndUpdate(other_id, {
+                $push: { "moment_data.$[momentData].comments": commentObj }
+            },
+            {
+                "arrayFilters": [{ "momentData._id": momentId }]
+            }, (err) => {
+                if(err) return next(err);
 
-            res.status(200).json({ message: "You have commented successfully!" });
-        });        
+                try {
+                   userModel.findById(other_id, {
+                        moment_data: { $elemMatch: { _id: momentId } }
+                    }, ( err, doc ) => {
+                        if(err) return next(err);
+                        
+                        const comments = doc?.moment_data[0].comments;
+
+                        res.status(200).json({ 
+                            message: "You have commented successfully!",
+                            updated: comments
+                        });
+                    });  
+                } catch (error) {
+                    return next(error);
+                }
+                          
+            }); 
+        } catch (error) {
+            return next(error);
+        }               
     },
 
     async momentDelete (req, res, next) {
@@ -210,7 +250,10 @@ const momentController = {
                         if(err) return next(err);
                     });
                     console.log("Data successfully deleted!")
-                    res.status(200).json({ message: "Data successfully deleted!" });            
+                    res.status(200).json({ 
+                        message: "Data successfully deleted!",
+                        flag: 1
+                    });            
                 } else {
                     return next(err);
                 }                 
@@ -218,6 +261,22 @@ const momentController = {
         } catch (error) {
             return next(error);    
         }        
+    },
+
+    /////////////////////stripe payment method//////////////////
+    //http:localhost:3000/api/moment/payment/create
+    async stripePayment(req, res) {
+        const totalAmt = req.query.total;
+        
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: totalAmt,
+            currency: 'inr'
+        });
+
+        console.log(`<<<₹${totalAmt/100} Payment request confirmed successfully!!!>>>`);
+        res.status(201).send({
+            clientSecret: paymentIntent.client_secret,      
+        });
     }
 }
 
