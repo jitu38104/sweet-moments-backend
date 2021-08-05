@@ -30,5 +30,7 @@ moment
 [+] add comment on a particular moment
 
 [+] git commit -m "final commit"
-[-] push this project on github
-[-] host it on Heroku for good
+[+] push this project on github
+[+] host it on Heroku for good
+
+heroku run bash -a sweet-moments-app

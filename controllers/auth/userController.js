@@ -203,11 +203,11 @@ const userController = {
     async userImageUpload (req, res, next) {        
         const userId = req.user?._id;
         try {
-            const user = await docFinder(userModel, userId);
+            const user = await docFinder(userModel, userId);            
             const imgPath = user?.image_path;
 
             if(!imgPath.includes('avatar')) {
-                fs.unlinkSync(user?.image_path);
+                fs.unlinkSync(imgPath);
             }            
 
             user.image_path = req.file?.path;
